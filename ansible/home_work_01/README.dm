@@ -35,3 +35,52 @@ ansible/
 
 
 
+
+
+
+
+
+# Gather all facts about localhost
+ansible -i inventory_local localhost -m setup
+
+# Gather specific facts about Docker
+ansible -i inventory_local localhost -m setup -a "filter=ansible_docker*"
+
+# Gather facts about users
+ansible -i inventory_local localhost -m setup -a "filter=ansible_user*"
+
+# Gather facts about packages
+ansible -i inventory_local localhost -m setup -a "filter=ansible_packages*"
+
+
+
+
+
+
+check_status.yml
+
+ansible-playbook -i inventory_local verify_all.yml
+
+
+
+
+
+
+
+
+
+
+Quick one-liner status check:
+# Check everything at once
+echo "=== Docker ===" && docker --version && \
+echo "=== Docker Service ===" && systemctl status docker --no-pager | grep Active && \
+echo "=== Backuper User ===" && id backuper && \
+echo "=== Backups Directory ===" && ls -la /opt/backups && \
+echo "=== App Config ===" && ls -la /opt/demo_app/config/ && \
+echo "=== Rsync ===" && rsync --version | head -1 && \
+echo "=== Rsync Config ===" && ls -la /etc/rsync.d/
+
+
+
+
+

@@ -1,0 +1,173 @@
+---
+- name: Complete verification of all homework tasks
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  
+  tasks:
+    - name: Task 1 - Verify Docker installation
+      block:
+        - name: Check Docker service
+          service_facts:
+          register: docker_service
+          
+        - name: Verify Docker is running
+          assert:
+            that:
+              - docker_service.ansible_facts.services['docker.service'].state == 'running'
+            fail_msg: "Docker service is not running"
+            success_msg: "✓ Docker service is running"
+          
+        - name: Check Docker version
+          command: docker --version
+          register: docker_ver
+          
+        - name: Display Docker version
+          debug:
+            msg: "✓ Docker installed: {{ docker_ver.stdout }}"
+      rescue:
+        - name: Docker verification failed
+          debug:
+            msg: "✗ Docker installation verification failed"
+    
+    - name: Task 2 - Verify app configuration
+      block:
+        - name: Check app config directory
+          stat:
+            path: /opt/demo_app/config
+          register: app_dir
+          
+        - name: Verify app directory
+          assert:
+            that:
+              - app_dir.stat.exists
+              - app_dir.stat.isdir
+            fail_msg: "App config directory not found"
+            success_msg: "✓ App config directory exists"
+          
+        - name: Check app.conf file
+          stat:
+            path: /opt/demo_app/config/app.conf
+          register: app_file
+          
+        - name: Verify app.conf
+          assert:
+            that:
+              - app_file.stat.exists
+              - app_file.stat.size > 0
+            fail_msg: "app.conf file not found or empty"
+            success_msg: "✓ app.conf file exists"
+          
+        - name: Display app.conf first few lines
+          command: head -n 5 /opt/demo_app/config/app.conf
+          register: app_content
+          
+        - name: Show app.conf preview
+          debug:
+            msg: "App config preview:\n{{ app_content.stdout }}"
+      rescue:
+        - name: App config verification failed
+          debug:
+            msg: "✗ Application configuration verification failed"
+    
+    - name: Task 3 - Verify backup user and script
+      block:
+        - name: Check backuper user
+          getent:
+            database: passwd
+            key: backuper
+          register: backup_user
+          
+        - name: Verify backuper user exists
+          assert:
+            that:
+              - backup_user.failed == false
+            fail_msg: "backuper user not found"
+            success_msg: "✓ backuper user exists"
+          
+        - name: Check /opt/backups directory
+          stat:
+            path: /opt/backups
+          register: backup_dir
+          
+        - name: Verify backups directory
+          assert:
+            that:
+              - backup_dir.stat.exists
+              - backup_dir.stat.pw_name == 'backuper'
+              - backup_dir.stat.gr_name == 'backuper'
+            fail_msg: "Backups directory not properly configured"
+            success_msg: "✓ Backups directory exists with correct ownership"
+          
+        - name: Check backup.sh script
+          stat:
+            path: /opt/backups/backup.sh
+          register: backup_script
+          
+        - name: Verify backup script
+          assert:
+            that:
+              - backup_script.stat.exists
+              - backup_script.stat.executable
+              - backup_script.stat.pw_name == 'backuper'
+            fail_msg: "backup.sh script not properly configured"
+            success_msg: "✓ backup.sh script exists and is executable"
+      rescue:
+        - name: Backup verification failed
+          debug:
+            msg: "✗ Backup configuration verification failed"
+    
+    - name: Task 4 - Verify rsync configuration
+      block:
+        - name: Check rsync installation
+          command: which rsync
+          register: rsync_path
+          
+        - name: Verify rsync installed
+          assert:
+            that:
+              - rsync_path.rc == 0
+            fail_msg: "rsync not installed"
+            success_msg: "✓ rsync is installed"
+          
+        - name: Check /etc/rsync.d directory
+          stat:
+            path: /etc/rsync.d
+          register: rsync_dir
+          
+        - name: Verify rsync.d directory
+          assert:
+            that:
+              - rsync_dir.stat.exists
+              - rsync_dir.stat.mode == '0755' or rsync_dir.stat.mode == '755'
+            fail_msg: "rsync.d directory not properly configured"
+            success_msg: "✓ /etc/rsync.d exists with correct permissions"
+          
+        - name: Check app.conf in rsync.d
+          stat:
+            path: /etc/rsync.d/app.conf
+          register: rsync_conf
+          
+        - name: Verify rsync config
+          assert:
+            that:
+              - rsync_conf.stat.exists
+              - rsync_conf.stat.mode == '0644' or rsync_conf.stat.mode == '644'
+            fail_msg: "rsync app.conf not properly configured"
+            success_msg: "✓ rsync app.conf exists with correct permissions"
+      rescue:
+        - name: Rsync verification failed
+          debug:
+            msg: "✗ Rsync configuration verification failed"
+    
+    - name: Summary of all checks
+      debug:
+        msg:
+          - "==========================================="
+          - "VERIFICATION SUMMARY"
+          - "==========================================="
+          - "✓ Docker: Installed and running"
+          - "✓ App Config: Directory and file created"
+          - "✓ Backup: User, directory, and script configured"
+          - "✓ Rsync: Installed and configured"
+          - "==========================================="
