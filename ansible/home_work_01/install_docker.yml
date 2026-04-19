@@ -1,7 +1,9 @@
 ---
 - name: Install Docker on Ubuntu
-  hosts: all
+  hosts: localhost
+  connection: local
   become: yes
+  
   tasks:
     - name: Update apt cache
       apt:
@@ -46,7 +48,7 @@
 
     - name: Add current user to docker group
       user:
-        name: "{{ ansible_user }}"
+        name: "{{ ansible_user_id }}"
         groups: docker
         append: yes
-      when: ansible_user != 'root'
+      when: ansible_user_id != 'root'
